@@ -5,16 +5,22 @@
 
 	let fetchLoading = $state(false);
 	let timeLoading = $state(false);
+	let postgresLoading = $state(false);
 	let fetchInterpretLoading = $state(false);
 	let timeInterpretLoading = $state(false);
+	let postgresInterpretLoading = $state(false);
 	let fetchError = $state('');
 	let timeError = $state('');
+	let postgresError = $state('');
 	let fetchInterpretError = $state('');
 	let timeInterpretError = $state('');
+	let postgresInterpretError = $state('');
 	let fetchResult = $state('');
 	let timeResult = $state('');
+	let postgresResult = $state('');
 	let fetchInterpretation = $state('');
 	let timeInterpretation = $state('');
+	let postgresInterpretation = $state('');
 
 	async function postJson(url, body) {
 		const response = await fetch(url, {
@@ -116,6 +122,40 @@
 			timeLoading = false;
 		}
 	}
+
+	async function runPostgres() {
+		postgresLoading = true;
+		postgresError = '';
+		postgresInterpretError = '';
+		postgresResult = '';
+		postgresInterpretation = '';
+
+		try {
+			const result = await postJson('/api/mcpo', {
+				path: '/postgres/list_objects',
+				body: {
+					schema_name: 'public',
+					object_type: 'table'
+				}
+			});
+
+			const formattedResult = result.content;
+
+			postgresResult = formattedResult;
+			postgresInterpretLoading = true;
+
+			try {
+				postgresInterpretation = await interpretResult('postgres', formattedResult);
+			} catch (error) {
+				postgresInterpretError = error instanceof Error ? error.message : 'Interpretation failed';
+			}
+		} catch (error) {
+			postgresError = error instanceof Error ? error.message : 'Request failed';
+		} finally {
+			postgresInterpretLoading = false;
+			postgresLoading = false;
+		}
+	}
 	</script>
 
 	<svelte:head>
@@ -190,6 +230,28 @@
 				<p>{timeInterpretError}</p>
 			{/if}
 			<pre>{timeInterpretLoading ? 'Interpreting...' : timeInterpretation || 'Interpretation will appear here.'}</pre>
+		</section>
+
+		<hr />
+
+		<section>
+			<h2>Postgres</h2>
+			<p>POST /postgres/list_objects</p>
+			<p>Gets all tables from the <code>public</code> schema.</p>
+			<p>
+				<button disabled={postgresLoading} onclick={runPostgres}>
+					{postgresLoading ? 'Loading...' : 'Get tables'}
+				</button>
+			</p>
+			{#if postgresError}
+				<p>{postgresError}</p>
+			{/if}
+			<pre>{postgresResult || 'Response will appear here.'}</pre>
+			<p>Ollama interpretation</p>
+			{#if postgresInterpretError}
+				<p>{postgresInterpretError}</p>
+			{/if}
+			<pre>{postgresInterpretLoading ? 'Interpreting...' : postgresInterpretation || 'Interpretation will appear here.'}</pre>
 		</section>
 	</div>
 

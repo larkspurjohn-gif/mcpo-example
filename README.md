@@ -4,6 +4,7 @@ SvelteKit example for testing two `mcpo`-exposed MCP tools from the browser:
 
 - `fetch` via `POST /fetch/fetch`
 - `time` via `POST /time/get_current_time`
+- `postgres` via `POST /postgres/list_objects`
 
 The page lives in [src/routes/+page.svelte](src/routes/+page.svelte) and sends requests to a local SvelteKit proxy at [src/routes/api/mcpo/+server.js](src/routes/api/mcpo/+server.js), which forwards them to the `mcpo` server configured by `mcpo_base_url`.
 
@@ -12,6 +13,7 @@ The page lives in [src/routes/+page.svelte](src/routes/+page.svelte) and sends r
 - Node.js and npm
 - `uvx` available in your shell
 - Ollama installed locally
+- Docker Compose
 
 ## Install
 
@@ -28,6 +30,16 @@ cp .env.example .env
 The default mcpo base URL is configured with `mcpo_base_url`.
 The Ollama base URL is configured with `ollama_base_url`.
 The Ollama model is configured with `ollama_model`.
+
+## Start Postgres
+
+Start the local Postgres database defined in [docker-compose.yml](docker-compose.yml):
+
+```sh
+docker compose up -d
+```
+
+This starts PostgreSQL on `localhost:5432` with the credentials used in [mcp_config.json](mcp_config.json).
 
 ## Start mcpo
 
@@ -49,6 +61,7 @@ Configured MCP servers:
 
 - `fetch` using `mcp-server-fetch`
 - `time` using `mcp-server-time`
+- `postgres` using `postgres-mcp`
 
 ## Run the example
 
@@ -73,12 +86,17 @@ Make sure Ollama is running at `ollama_base_url` with the configured model avail
 	- `max_length`
 - Sends a time request with:
 	- `timezone`
+- Sends a postgres request with:
+	- `schema_name`
+	- `object_type`
 - Displays the raw response body and an Ollama interpretation
 
 Default example inputs:
 
 - Fetch URL: `https://en.wikipedia.org/wiki/Pizza`
 - Timezone: `UTC`
+- Postgres schema: `public`
+- Postgres object type: `table`
 
 ## Build
 

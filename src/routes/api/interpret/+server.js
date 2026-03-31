@@ -7,12 +7,13 @@ const ollamaBaseUrl = new URL(env.ollama_base_url || FALLBACK_OLLAMA_BASE_URL);
 const ollamaModel = env.ollama_model || FALLBACK_OLLAMA_MODEL;
 const toolPrompts = {
 	fetch: 'Interpret this fetch tool response for a user. Give a short plain-English summary with the most important information.',
-	time: 'Interpret this time tool response for a user. State the current time clearly and mention the timezone.'
+	time: 'Interpret this time tool response for a user. State the current time clearly and mention the timezone.',
+	postgres: 'Interpret this postgres tool response for a user. Summarize the query result briefly and mention any returned rows or key values.'
 };
 
 function normalizeTool(input) {
-	if (input !== 'fetch' && input !== 'time') {
-		throw error(400, 'tool must be fetch or time');
+	if (input !== 'fetch' && input !== 'time' && input !== 'postgres') {
+		throw error(400, 'tool must be fetch, time, or postgres');
 	}
 
 	return input;
