@@ -1,7 +1,4 @@
 <script>
-	const defaultBaseUrl = 'http://127.0.0.1:8000';
-
-	let baseUrl = $state(defaultBaseUrl);
 	let fetchUrl = $state('https://en.wikipedia.org/wiki/Pizza');
 	let fetchMaxLength = $state(600);
 	let timezone = $state('UTC');
@@ -14,12 +11,15 @@
 	let timeResult = $state('');
 
 	async function postJson(path, body) {
-		const response = await fetch(`${baseUrl}${path}`, {
+		const response = await fetch('/api/mcpo', {
 			method: 'POST',
 			headers: {
 				'content-type': 'application/json'
 			},
-			body: JSON.stringify(body)
+			body: JSON.stringify({
+				path,
+				body
+			})
 		});
 
 		const text = await response.text();
@@ -77,22 +77,17 @@
 	</script>
 
 	<svelte:head>
-		<title>mcpo Frontend Example</title>
+		<title>mcpo Example</title>
 		<meta
 			name="description"
-			content="Small Svelte frontend that calls mcpo fetch and time endpoints on port 8000."
+			content="Svelte example that calls mcpo fetch and time endpoints on port 8000."
 		/>
 	</svelte:head>
 
 	<div class="page">
-		<h1>mcpo frontend example</h1>
-		<p>Keep <code>uvx mcpo --port 8000 --config ./mcp_config.json</code> running.</p>
-
+		<h1>mcpo example</h1>
 		<p>
-			<label>
-				mcpo base URL
-				<input bind:value={baseUrl} type="url" spellcheck="false" />
-			</label>
+			Keep <code>uvx mcpo --port 8000 --config ./mcp_config.json</code> running. This page calls the local SvelteKit proxy, which forwards requests to mcpo.
 		</p>
 
 		<hr />
