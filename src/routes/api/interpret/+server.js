@@ -6,9 +6,9 @@ const FALLBACK_OLLAMA_MODEL = 'gemma3:1b';
 const ollamaBaseUrl = new URL(env.ollama_base_url || FALLBACK_OLLAMA_BASE_URL);
 const ollamaModel = env.ollama_model || FALLBACK_OLLAMA_MODEL;
 const toolPrompts = {
-	fetch: 'Interpret this fetch tool response for a user. Give a short plain-English summary with the most important information.',
+	fetch: 'Give a short plain-English summary with the most important information.',
 	time: 'Interpret this time tool response for a user. State the current time clearly and mention the timezone.',
-	postgres: 'Interpret this postgres tool response for a user. Summarize the query result briefly and mention any returned rows or key values.'
+	postgres: 'Summarize the query result briefly and mention any returned rows or key values.'
 };
 
 function normalizeTool(input) {
