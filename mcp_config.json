@@ -1,22 +1,10 @@
 {
   "mcpServers": {
-    "fetch": {
-      "command": "uvx",
-      "args": ["mcp-server-fetch"]
-    },
-    "time": {
-      "command": "uvx",
-      "args": ["mcp-server-time"]
-    },
-    "postgres": {
-      "command": "uvx",
-      "args": [
-        "postgres-mcp",
-        "--access-mode=unrestricted"
-      ],
-      "env": {
-        "DATABASE_URI": "postgres://user:password@localhost:5432/mydb"
-      }
-    }
+  "osm-mcp-server": {
+    "command": "uvx",
+    "args": [
+      "osm-mcp-server"
+    ]
   }
+}
 }

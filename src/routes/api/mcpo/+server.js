@@ -19,7 +19,9 @@ function normalizePath(input) {
 export async function POST({ request, fetch }) {
 	const payload = await request.json();
 	const path = normalizePath(payload.path);
-
+	console.log(payload);
+	console.log(payload.body);
+	console.log(path);
 	const mcpoResponse = await fetch(`${mcpoBaseUrl.toString().replace(/\/$/, '')}${path}`, {
 		method: 'POST',
 		headers: {

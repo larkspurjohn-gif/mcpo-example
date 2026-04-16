@@ -8,12 +8,13 @@ const ollamaModel = env.ollama_model || FALLBACK_OLLAMA_MODEL;
 const toolPrompts = {
 	fetch: 'Give a short plain-English summary with the most important information.',
 	time: 'Interpret this time tool response for a user. State the current time clearly and mention the timezone.',
-	postgres: 'Summarize the query result briefly and mention any returned rows or key values.'
+	postgres: 'Summarize the query result briefly and mention any returned rows or key values.',
+	osm: 'Can you tell me what type of building is at the location given'
 };
 
 function normalizeTool(input) {
-	if (input !== 'fetch' && input !== 'time' && input !== 'postgres') {
-		throw error(400, 'tool must be fetch, time, or postgres');
+	if (input !== 'fetch' && input !== 'time' && input !== 'postgres' && input !== 'osm') {
+		throw error(400, 'tool must be fetch, time, postgres, or osm');
 	}
 
 	return input;
@@ -33,9 +34,10 @@ function buildPrompt(tool, content) {
 
 export async function POST({ request, fetch }) {
 	const payload = await request.json();
+	console.log(payload.tool);
 	const tool = normalizeTool(payload.tool);
 	const content = normalizeContent(payload.content);
-
+	console.log(buildPrompt(tool, content));
 	const ollamaResponse = await fetch(`${ollamaBaseUrl.toString().replace(/\/$/, '')}/api/generate`, {
 		method: 'POST',
 		headers: {
@@ -50,6 +52,7 @@ export async function POST({ request, fetch }) {
 
 	const text = await ollamaResponse.text();
 	let parsed = text;
+	console.log(text);
 
 	try {
 		parsed = JSON.parse(text);

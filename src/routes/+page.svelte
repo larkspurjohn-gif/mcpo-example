@@ -1,330 +1,170 @@
 <script>
-	let fetchUrl = $state('https://en.wikipedia.org/wiki/Pizza');
-	let fetchMaxLength = $state(600);
-	let timezone = $state('UTC');
+    // OSM State
+    let addressQuery = $state('');
+    let osmLoading = $state(false);
+    let osmInterpretLoading = $state(false);
+    let osmError = $state('');
+    let osmInterpretError = $state('');
+    let osmResult = $state('');
+    let osmInterpretation = $state('');
 
-	let fetchLoading = $state(false);
-	let timeLoading = $state(false);
-	let postgresLoading = $state(false);
-	let fetchInterpretLoading = $state(false);
-	let timeInterpretLoading = $state(false);
-	let postgresInterpretLoading = $state(false);
-	let fetchError = $state('');
-	let timeError = $state('');
-	let postgresError = $state('');
-	let fetchInterpretError = $state('');
-	let timeInterpretError = $state('');
-	let postgresInterpretError = $state('');
-	let fetchResult = $state('');
-	let timeResult = $state('');
-	let postgresResult = $state('');
-	let fetchInterpretation = $state('');
-	let timeInterpretation = $state('');
-	let postgresInterpretation = $state('');
+    async function postJson(url, body) {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify(body)
+        });
 
-	async function postJson(url, body) {
-		const response = await fetch(url, {
-			method: 'POST',
-			headers: {
-				'content-type': 'application/json'
-			},
-			body: JSON.stringify(body)
-		});
+        const text = await response.text();
+        let parsed = text;
+        try { 
+            parsed = JSON.parse(text); 
+        } catch { 
+            // Keep plain text
+        }
 
-		const text = await response.text();
-		let parsed = text;
+        if (!response.ok) {
+            throw new Error(typeof parsed === 'string' ? parsed : JSON.stringify(parsed, null, 2));
+        }
+        return parsed;
+    }
 
-		try {
-			parsed = JSON.parse(text);
-		} catch {
-			// Keep plain text responses as-is.
-		}
+    async function interpretResult(tool, content) {
+        const result = await postJson('/api/interpret', { tool, content });
+        return result.content;
+    }
 
-		if (!response.ok) {
-			throw new Error(typeof parsed === 'string' ? parsed : JSON.stringify(parsed, null, 2));
-		}
+    async function runGeocode() {
+        osmLoading = true;
+        osmError = '';
+        osmInterpretError = '';
+        osmResult = '';
+        osmInterpretation = '';
 
-		return parsed;
-	}
+        try {
+        const result = await postJson('/api/mcpo', {
+            // Updated to match your specific config key: "osm-mcp-server"
+            path: '/osm-mcp-server/geocode_address', 
+            body: {
+                address: addressQuery
+            }
+        });
+		console.log(result);
 
-	async function interpretResult(tool, content) {
-		const result = await postJson('/api/interpret', {
-			tool,
-			content
-		});
+        const formattedResult = result.content;
+        osmResult = formattedResult;
+            osmInterpretLoading = true;
 
-		return result.content;
-	}
+            try {
+                osmInterpretation = await interpretResult('osm', formattedResult);
+				console.log('osmInterpretation', osmInterpretation);
+            } catch (error) {
+                osmInterpretError = error instanceof Error ? error.message : 'Interpretation failed';
+            }
+       } catch (error) {
+        osmError = error instanceof Error ? error.message : 'Request failed';
+    } finally {
+        osmInterpretLoading = false;
+		osmLoading = false;
+    }
+    }
+</script>
 
-	async function runFetch() {
-		fetchLoading = true;
-		fetchError = '';
-		fetchInterpretError = '';
-		fetchResult = '';
-		fetchInterpretation = '';
+<svelte:head>
+    <title>OSM Geocoder</title>
+</svelte:head>
 
-		try {
-			const result = await postJson('/api/mcpo', {
-				path: '/fetch/fetch',
-				body: {
-					url: fetchUrl,
-					max_length: Number(fetchMaxLength)
-				}
-			});
+<div class="page">
+    <h1>OSM Geocoder</h1>
+    <p>
+        Communicating with <code>open-streetmap-mcp</code> via mcpo.
+    </p>
 
-			const formattedResult = result.content;
+    <section>
+        <h2>Geocode Address</h2>
+        <p>
+            <label>
+                Address Query
+                <input bind:value={addressQuery} type="text" spellcheck="false" />
+            </label>
+        </p>
+        <p>
+            <button disabled={osmLoading} onclick={runGeocode}>
+                {osmLoading ? 'Searching...' : 'Search Location'}
+            </button>
+        </p>
 
-			fetchResult = formattedResult;
-			fetchInterpretLoading = true;
+        {#if osmError}
+            <p class="error">{osmError}</p>
+        {/if}
 
-			try {
-				fetchInterpretation = await interpretResult('fetch', formattedResult);
-			} catch (error) {
-				fetchInterpretError = error instanceof Error ? error.message : 'Interpretation failed';
-			}
-		} catch (error) {
-			fetchError = error instanceof Error ? error.message : 'Request failed';
-		} finally {
-			fetchInterpretLoading = false;
-			fetchLoading = false;
-		}
-	}
+        <h3>Raw Result</h3>
+        <pre>{osmResult || 'Results will appear here.'}</pre>
 
-	async function runTime() {
-		timeLoading = true;
-		timeError = '';
-		timeInterpretError = '';
-		timeResult = '';
-		timeInterpretation = '';
+        <h3>AI Interpretation</h3>
+        {#if osmInterpretError}
+            <p class="error">{osmInterpretError}</p>
+        {/if}
+        <pre>{osmInterpretLoading ? 'Interpreting...' : osmInterpretation || 'Waiting for result...'}</pre>
+    </section>
+</div>
 
-		try {
-			const result = await postJson('/api/mcpo', {
-				path: '/time/get_current_time',
-				body: {
-					timezone
-				}
-			});
+<style>
+    :global(body) {
+        margin: 0;
+        font-family: sans-serif;
+        background-color: #f9f9f9;
+    }
 
-			const formattedResult = result.content;
+    .page {
+        max-width: 40rem;
+        margin: 0 auto;
+        padding: 2rem 1.5rem;
+        background: white;
+        min-height: 100vh;
+        box-shadow: 0 0 10px rgba(0,0,0,0.05);
+    }
 
-			timeResult = formattedResult;
-			timeInterpretLoading = true;
+    h1 { font-weight: 700; margin-bottom: 0.5rem; }
+    h2 { font-weight: 600; color: #444; }
+    h3 { font-size: 1rem; margin-top: 1.5rem; color: #666; }
 
-			try {
-				timeInterpretation = await interpretResult('time', formattedResult);
-			} catch (error) {
-				timeInterpretError = error instanceof Error ? error.message : 'Interpretation failed';
-			}
-		} catch (error) {
-			timeError = error instanceof Error ? error.message : 'Request failed';
-		} finally {
-			timeInterpretLoading = false;
-			timeLoading = false;
-		}
-	}
+    label { display: block; margin-bottom: 0.5rem; }
 
-	async function runPostgres() {
-		postgresLoading = true;
-		postgresError = '';
-		postgresInterpretError = '';
-		postgresResult = '';
-		postgresInterpretation = '';
+    input {
+        display: block;
+        width: 100%;
+        padding: 0.75rem;
+        font: inherit;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        box-sizing: border-box;
+    }
 
-		try {
-			const result = await postJson('/api/mcpo', {
-				path: '/postgres/list_objects',
-				body: {
-					schema_name: 'public',
-					object_type: 'table'
-				}
-			});
+    button {
+        padding: 0.75rem 1.5rem;
+        font: inherit;
+        font-weight: bold;
+        background-color: #007bff;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+    }
 
-			const formattedResult = result.content;
+    button:hover:enabled { background-color: #0056b3; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
 
-			postgresResult = formattedResult;
-			postgresInterpretLoading = true;
+    pre {
+        padding: 1rem;
+        background: #f4f4f4;
+        border-radius: 4px;
+        border: 1px solid #ddd;
+        overflow-x: auto;
+        white-space: pre-wrap;
+        font-size: 0.9rem;
+        min-height: 6rem;
+    }
 
-			try {
-				postgresInterpretation = await interpretResult('postgres', formattedResult);
-			} catch (error) {
-				postgresInterpretError = error instanceof Error ? error.message : 'Interpretation failed';
-			}
-		} catch (error) {
-			postgresError = error instanceof Error ? error.message : 'Request failed';
-		} finally {
-			postgresInterpretLoading = false;
-			postgresLoading = false;
-		}
-	}
-	</script>
-
-	<svelte:head>
-		<title>mcpo Example</title>
-		<meta
-			name="description"
-			content="Svelte example that calls mcpo fetch and time endpoints on port 8000."
-		/>
-	</svelte:head>
-
-	<div class="page">
-		<h1>mcpo example</h1>
-		<p>
-			Keep <code>uvx mcpo --port 8000 --config ./mcp_config.json</code> running. This page calls the local SvelteKit proxy, which forwards requests to mcpo.
-		</p>
-
-		<hr />
-
-		<section>
-			<h2>Fetch</h2>
-			<p>POST /fetch/fetch</p>
-			<p>
-				<label>
-					URL
-					<input bind:value={fetchUrl} type="url" spellcheck="false" />
-				</label>
-			</p>
-			<p>
-				<label>
-					Max length
-					<input bind:value={fetchMaxLength} min="50" step="50" type="number" />
-				</label>
-			</p>
-			<p>
-				<button disabled={fetchLoading} onclick={runFetch}>
-					{fetchLoading ? 'Loading...' : 'Run fetch'}
-				</button>
-			</p>
-			{#if fetchError}
-				<p>{fetchError}</p>
-			{/if}
-			<pre>{fetchResult || 'Response will appear here.'}</pre>
-			<p>Ollama interpretation</p>
-			{#if fetchInterpretError}
-				<p>{fetchInterpretError}</p>
-			{/if}
-			<pre>{fetchInterpretLoading ? 'Interpreting...' : fetchInterpretation || 'Interpretation will appear here.'}</pre>
-		</section>
-
-		<hr />
-
-		<section>
-			<h2>Time</h2>
-			<p>POST /time/get_current_time</p>
-			<p>
-				<label>
-					Timezone
-					<input bind:value={timezone} type="text" spellcheck="false" />
-				</label>
-			</p>
-			<p>
-				<button disabled={timeLoading} onclick={runTime}>
-					{timeLoading ? 'Loading...' : 'Get current time'}
-				</button>
-			</p>
-			{#if timeError}
-				<p>{timeError}</p>
-			{/if}
-			<pre>{timeResult || 'Response will appear here.'}</pre>
-			<p>Ollama interpretation</p>
-			{#if timeInterpretError}
-				<p>{timeInterpretError}</p>
-			{/if}
-			<pre>{timeInterpretLoading ? 'Interpreting...' : timeInterpretation || 'Interpretation will appear here.'}</pre>
-		</section>
-
-		<hr />
-
-		<section>
-			<h2>Postgres</h2>
-			<p>POST /postgres/list_objects</p>
-			<p>Gets all tables from the <code>public</code> schema.</p>
-			<p>
-				<button disabled={postgresLoading} onclick={runPostgres}>
-					{postgresLoading ? 'Loading...' : 'Get tables'}
-				</button>
-			</p>
-			{#if postgresError}
-				<p>{postgresError}</p>
-			{/if}
-			<pre>{postgresResult || 'Response will appear here.'}</pre>
-			<p>Ollama interpretation</p>
-			{#if postgresInterpretError}
-				<p>{postgresInterpretError}</p>
-			{/if}
-			<pre>{postgresInterpretLoading ? 'Interpreting...' : postgresInterpretation || 'Interpretation will appear here.'}</pre>
-		</section>
-	</div>
-
-	<style>
-		:global(body) {
-			margin: 0;
-			font-family: sans-serif;
-		}
-
-		.page {
-			max-width: 48rem;
-			margin: 0 auto;
-			padding: 2rem 1rem 3rem;
-		}
-
-		h1,
-		h2,
-		p,
-		label,
-		button {
-			font-weight: 400;
-		}
-
-		h2 {
-			font-weight: 700;
-		}
-
-		section {
-			margin: 1.5rem 0;
-		}
-
-		hr {
-			margin: 2rem 0;
-		}
-
-		label {
-			display: block;
-		}
-
-		input {
-			display: block;
-			width: 100%;
-			max-width: 32rem;
-			margin-top: 0.35rem;
-			padding: 0.5rem;
-			font: inherit;
-			box-sizing: border-box;
-		}
-
-		button {
-			padding: 0.5rem 0.75rem;
-			margin: 1rem 0 1rem;
-			font: inherit;
-			border: 1px solid;
-			background: transparent;
-			cursor: pointer;
-		}
-
-		button:hover:enabled {
-			background: rgba(0, 0, 0, 0.05);
-		}
-
-		button:disabled {
-			opacity: 0.6;
-			cursor: default;
-		}
-
-		pre {
-			padding: 0.75rem;
-			border: 1px solid;
-			overflow: auto;
-			white-space: pre-wrap;
-			word-break: break-word;
-			min-height: 8rem;
-		}
-	</style>
+    .error { color: #d9534f; font-weight: bold; }
+</style>
